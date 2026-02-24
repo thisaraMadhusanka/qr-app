@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio</title>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(6,182,212,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0 2rem;
+    height: 64px;
+  }
+
+  .nav-logo {
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.03em;
+  }
+
+  .nav-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .nav-tab {
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+
+  .nav-tab:hover { color: var(--text); border-color: var(--accent); }
+  .nav-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* PAGES */
+  .page { display: none; position: relative; z-index: 1; }
+  .page.active { display: block; }
+
+  /* CONTAINER */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+
+  /* HEADINGS */
+  .page-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 400;
+    margin-bottom: 2.5rem;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+
+  /* FORM ELEMENTS */
+  label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="text"], input[type="number"], textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #6d28d9; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.4); }
+
+  .btn-cyan {
+    background: var(--accent2);
+    color: #0a0a0f;
+  }
+  .btn-cyan:hover { background: #0891b2; transform: translateY(-1px); }
+
+  .btn-amber {
+    background: var(--accent3);
+    color: #0a0a0f;
+  }
+  .btn-amber:hover { background: #d97706; transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 1.2rem;
+    width: fit-content;
+  }
+
+  .mode-btn {
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* QR OUTPUT */
+  #qr-output-section { display: none; }
+
+  .qr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .qr-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+  }
+
+  .qr-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .qr-item canvas, .qr-item img {
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .qr-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent2);
+    margin-top: 0.75rem;
+    word-break: break-all;
+    background: rgba(6,182,212,0.1);
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .qr-item-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .qr-item-actions .btn {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 7px;
+  }
+
+  /* SAVED LIST */
+  .saved-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .saved-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .saved-item:hover { border-color: var(--accent); }
+
+  .saved-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .saved-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent2);
+    flex: 1;
+  }
+
+  .saved-ts {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .saved-actions { display: flex; gap: 0.4rem; }
+  .saved-actions .btn { padding: 0.3rem 0.7rem; font-size: 0.72rem; }
+
+  /* SCANNER PAGE */
+  .scan-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 0 1.5rem;
+  }
+
+  .scan-btn-big {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: rgba(124,58,237,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.3s;
+    margin-bottom: 1.5rem;
+    position: relative;
+    animation: pulse-ring 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); }
+    50% { box-shadow: 0 0 0 20px rgba(124,58,237,0); }
+  }
+
+  .scan-btn-big:hover {
+    background: rgba(124,58,237,0.2);
+    transform: scale(1.05);
+  }
+
+  .scan-btn-big svg { width: 40px; height: 40px; }
+
+  /* Scanner container */
+  #reader-container { display: none; margin-top: 1.5rem; }
+
+  #reader {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid var(--accent);
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  /* FORM */
+  .form-result { display: none; }
+
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--success);
+    border-radius: 16px;
+    padding: 1.8rem;
+    margin-top: 1.5rem;
+  }
+
+  .scan-success-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--success);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1rem;
+  }
+
+  @media (max-width: 540px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .nav { flex-wrap: wrap; height: auto; padding: 1rem; }
+  }
+
+  .auto-filled {
+    border-color: var(--success) !important;
+    background: rgba(16,185,129,0.07) !important;
+  }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    top: 80px;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .toast {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slide-in 0.3s ease;
+    min-width: 220px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  @keyframes slide-in {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+
+  /* CHIP */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    background: rgba(124,58,237,0.2);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #a78bfa;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  /* SCAN STATUS */
+  #scan-status {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    text-align: center;
+  }
+
+  /* Stop button */
+  #stop-scan-btn { display: none; margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">QR Studio</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('generator')">⊞ Generator</button>
+    <button class="nav-tab" onclick="showPage('scanner')">◎ Scanner</button>
+  </div>
+</nav>
+
+<!-- ═══════════════ GENERATOR PAGE ═══════════════ -->
+<div class="page active" id="page-generator">
+  <div class="container">
+    <div class="page-title">QR Generator</div>
+    <div class="page-subtitle">Create QR codes with custom or random IDs — save, download & manage.</div>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="card-title">Create QR Code</div>
+
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-random" onclick="setMode('random')">Random ID</button>
+        <button class="mode-btn" id="mode-custom" onclick="setMode('custom')">Custom ID</button>
+        <button class="mode-btn" id="mode-bulk" onclick="setMode('bulk')">Bulk</button>
+      </div>
+
+      <!-- Random mode -->
+      <div id="panel-random">
+        <label>ID Prefix (optional)</label>
+        <input type="text" id="prefix-input" placeholder="e.g. ITEM-" style="margin-bottom:0.6rem;">
+        <label>ID Length</label>
+        <input type="number" id="id-length" value="8" min="4" max="20" style="margin-bottom:0;">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateRandom()">⚡ Generate Random ID</button>
+        </div>
+      </div>
+
+      <!-- Custom mode -->
+      <div id="panel-custom" style="display:none;">
+        <label>Custom ID / Number</label>
+        <input type="text" id="custom-id-input" placeholder="e.g. 1001 or BADGE-42">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateCustom()">⊞ Generate QR</button>
+        </div>
+      </div>
+
+      <!-- Bulk mode -->
+      <div id="panel-bulk" style="display:none;">
+        <label>Prefix</label>
+        <input type="text" id="bulk-prefix" placeholder="e.g. USER-">
+        <label>How many QR codes?</label>
+        <input type="number" id="bulk-count" value="5" min="1" max="50">
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateBulk()">⚡ Generate Bulk</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Output -->
+    <div id="qr-output-section">
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.2rem;">
+          <div class="card-title" style="margin:0;">Generated QR Codes</div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn btn-amber" onclick="downloadAllPDF()">⬇ Download All PDF</button>
+            <button class="btn btn-success" onclick="saveAllToList()">💾 Save All</button>
+            <button class="btn btn-ghost" onclick="clearOutput()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="qr-grid" id="qr-grid"></div>
+      </div>
+    </div>
+
+    <!-- Saved QR List -->
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.2rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <div class="card-title" style="margin:0;">Saved QR Codes</div>
+          <span class="chip" id="saved-count">0 saved</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-amber" onclick="downloadSavedPDF()">⬇ Export All PDF</button>
+          <button class="btn btn-ghost btn-danger" onclick="clearSaved()" style="color:#ef4444;border-color:#ef4444;">🗑 Clear All</button>
+        </div>
+      </div>
+      <div class="saved-list" id="saved-list">
+        <div class="empty">No QR codes saved yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCANNER PAGE ═══════════════ -->
+<div class="page" id="page-scanner">
+  <div class="container">
+    <div class="page-title">QR Scanner</div>
+    <div class="page-subtitle">Scan a QR code to auto-fill the form below.</div>
+
+    <div class="card">
+      <div class="scan-hero">
+        <button class="scan-btn-big" id="start-scan-btn" onclick="startScanner()">
+          <!-- QR Icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+            <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/>
+            <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
+            <path d="M14 14h2v2h-2zM16 16h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" fill="currentColor" stroke="none"/>
+          </svg>
+          SCAN QR
+        </button>
+        <div id="scan-status">Click to activate camera scanner</div>
+        <button class="btn btn-danger" id="stop-scan-btn" onclick="stopScanner()">■ Stop Scanner</button>
+      </div>
+
+      <div id="reader-container">
+        <div id="reader"></div>
+      </div>
+    </div>
+
+    <!-- Result Form -->
+    <div class="form-result" id="form-result">
+      <div class="form-card">
+        <div class="scan-success-badge">
+          ✓ QR Scanned Successfully
+        </div>
+        <div class="page-title" style="font-size:1.4rem; margin-bottom:0.3rem;">Fill in Details</div>
+        <p class="page-subtitle" style="margin-bottom:1.5rem;">QR ID has been auto-filled. Complete the remaining fields.</p>
+
+        <div class="form-grid">
+          <div>
+            <label>QR ID <span style="color:var(--success)">● Auto-filled</span></label>
+            <input type="text" id="form-qid" readonly class="auto-filled">
+          </div>
+          <div>
+            <label>Full Name</label>
+            <input type="text" id="form-name" placeholder="John Doe">
+          </div>
+          <div>
+            <label>Email</label>
+            <input type="text" id="form-email" placeholder="john@example.com">
+          </div>
+          <div>
+            <label>Phone</label>
+            <input type="text" id="form-phone" placeholder="+1 555 0000">
+          </div>
+        </div>
+
+        <label>Notes</label>
+        <textarea id="form-notes" rows="3" placeholder="Additional notes..."></textarea>
+
+        <label>Scan Timestamp</label>
+        <input type="text" id="form-timestamp" readonly class="auto-filled">
+
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="submitForm()">✓ Submit</button>
+          <button class="btn btn-ghost" onclick="resetForm()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submissions Log -->
+    <div class="card" id="submissions-section" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:1rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <div class="card-title" style="margin:0;">Submissions</div>
+          <span class="chip" id="submissions-count">0</span>
+        </div>
+        <button class="btn btn-ghost" onclick="clearSubmissions()" style="font-size:0.75rem;">🗑 Clear</button>
+      </div>
+      <div id="submissions-list" class="saved-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── UTILS ──────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type==='success'?'✓':'✕'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function uid(len=8, prefix='') {
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id=prefix;
+  for(let i=0;i<len;i++) id+=chars[Math.floor(Math.random()*chars.length)];
+  return id;
+}
+
+// ── PAGE SWITCHING ─────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    if(t.textContent.toLowerCase().includes(name.slice(0,4))) t.classList.add('active');
+  });
+  if(name!=='scanner' && htmlScanner) { stopScanner(); }
+}
+
+// ── MODE TOGGLE ────────────────────────────────────────────
+function setMode(mode) {
+  ['random','custom','bulk'].forEach(m=>{
+    document.getElementById('panel-'+m).style.display = m===mode?'block':'none';
+    document.getElementById('mode-'+m).classList.toggle('active', m===mode);
+  });
+}
+
+// ── QR GENERATION ─────────────────────────────────────────
+let currentQRs = []; // {id, canvas/img}
+
+function generateRandom() {
+  const prefix = document.getElementById('prefix-input').value.trim();
+  const len = parseInt(document.getElementById('id-length').value)||8;
+  const id = uid(len, prefix);
+  renderQR([id]);
+}
+
+function generateCustom() {
+  const id = document.getElementById('custom-id-input').value.trim();
+  if(!id) { toast('Please enter an ID','error'); return; }
+  renderQR([id]);
+}
+
+function generateBulk() {
+  const prefix = document.getElementById('bulk-prefix').value.trim();
+  const count = Math.min(parseInt(document.getElementById('bulk-count').value)||5, 50);
+  const ids = Array.from({length:count}, ()=>uid(8, prefix));
+  renderQR(ids);
+}
+
+function renderQR(ids) {
+  const section = document.getElementById('qr-output-section');
+  const grid = document.getElementById('qr-grid');
+  section.style.display = 'block';
+
+  ids.forEach(id => {
+    const item = document.createElement('div');
+    item.className = 'qr-item';
+    item.id = 'qi-'+id;
+
+    const qrDiv = document.createElement('div');
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(qrDiv);
+
+    const label = document.createElement('div');
+    label.className = 'qr-id';
+    label.textContent = id;
+
+    const actions = document.createElement('div');
+    actions.className = 'qr-item-actions';
+
+    const btnSave = document.createElement('button');
+    btnSave.className = 'btn btn-success';
+    btnSave.textContent = '💾 Save';
+    btnSave.onclick = () => saveQR(id, btnSave);
+
+    const btnDL = document.createElement('button');
+    btnDL.className = 'btn btn-amber';
+    btnDL.textContent = '⬇ PDF';
+    btnDL.onclick = () => downloadSinglePDF(id);
+
+    actions.appendChild(btnSave);
+    actions.appendChild(btnDL);
+
+    item.appendChild(wrapper);
+    item.appendChild(label);
+    item.appendChild(actions);
+    grid.appendChild(item);
+
+    // Generate QR
+    new QRCode(qrDiv, {
+      text: id,
+      width: 160,
+      height: 160,
+      colorDark: '#0a0a0f',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    currentQRs.push({id, el: qrDiv});
+  });
+}
+
+function clearOutput() {
+  document.getElementById('qr-grid').innerHTML = '';
+  document.getElementById('qr-output-section').style.display = 'none';
+  currentQRs = [];
+}
+
+// ── SAVE QR ─────────────────────────────────────────────────
+let savedQRs = JSON.parse(localStorage.getItem('savedQRs')||'[]');
+
+function saveQR(id, btn) {
+  if(savedQRs.find(q=>q.id===id)) { toast('Already saved!','error'); return; }
+  savedQRs.push({id, ts: new Date().toLocaleString()});
+  localStorage.setItem('savedQRs', JSON.stringify(savedQRs));
+  renderSaved();
+  toast('QR saved!');
+  if(btn) { btn.textContent = '✓ Saved'; btn.disabled = true; }
+}
+
+function saveAllToList() {
+  currentQRs.forEach(q => {
+    if(!savedQRs.find(s=>s.id===q.id)) {
+      savedQRs.push({id:q.id, ts: new Date().toLocaleString()});
+    }
+  });
+  localStorage.setItem('savedQRs', JSON.stringify(savedQRs));
+  renderSaved();
+  toast(`Saved ${currentQRs.length} QR codes!`);
+}
+
+function clearSaved() {
+  if(!confirm('Clear all saved QR codes?')) return;
+  savedQRs = [];
+  localStorage.removeItem('savedQRs');
+  renderSaved();
+}
+
+function renderSaved() {
+  const list = document.getElementById('saved-list');
+  const count = document.getElementById('saved-count');
+  count.textContent = savedQRs.length + ' saved';
+
+  if(savedQRs.length===0) {
+    list.innerHTML = '<div class="empty">No QR codes saved yet.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  savedQRs.slice().reverse().forEach(q => {
+    const item = document.createElement('div');
+    item.className = 'saved-item';
+    item.innerHTML = `
+      <div class="saved-dot"></div>
+      <div class="saved-id">${q.id}</div>
+      <div class="saved-ts">${q.ts}</div>
+      <div class="saved-actions">
+        <button class="btn btn-amber" onclick="downloadSavedSinglePDF('${q.id}')">⬇</button>
+        <button class="btn btn-danger" onclick="deleteSaved('${q.id}')">✕</button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function deleteSaved(id) {
+  savedQRs = savedQRs.filter(q=>q.id!==id);
+  localStorage.setItem('savedQRs', JSON.stringify(savedQRs));
+  renderSaved();
+  toast('Removed');
+}
+
+// ── PDF DOWNLOAD ────────────────────────────────────────────
+function getQRCanvas(id) {
+  // Get the img or canvas from the QR lib output
+  const qiEl = document.getElementById('qi-'+id);
+  if(!qiEl) return null;
+  const img = qiEl.querySelector('img');
+  const canvas = qiEl.querySelector('canvas');
+  return img || canvas;
+}
+
+function elementToDataURL(el) {
+  if(!el) return null;
+  if(el.tagName==='IMG') return el.src;
+  if(el.tagName==='CANVAS') return el.toDataURL('image/png');
+  return null;
+}
+
+function downloadSinglePDF(id) {
+  const el = getQRCanvas(id);
+  if(!el) { toast('QR not found','error'); return; }
+  const dataUrl = elementToDataURL(el);
+  if(!dataUrl) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a6'});
+  doc.setFillColor(10,10,15);
+  doc.rect(0,0,105,148,'F');
+  doc.addImage(dataUrl,'PNG',22.5,30,60,60);
+  doc.setTextColor(108,99,255);
+  doc.setFontSize(10);
+  doc.setFont('courier','bold');
+  doc.text('QR STUDIO',52.5,20,{align:'center'});
+  doc.setTextColor(6,182,212);
+  doc.setFontSize(8);
+  doc.text(id,52.5,100,{align:'center'});
+  doc.setTextColor(107,107,138);
+  doc.setFontSize(7);
+  doc.text('Scan to auto-fill form',52.5,108,{align:'center'});
+  doc.save(`QR_${id}.pdf`);
+  toast('PDF downloaded!');
+}
+
+async function makeQRDataURL(id) {
+  // Create a temp offscreen QR
+  return new Promise((resolve) => {
+    const tmp = document.createElement('div');
+    tmp.style.position = 'absolute';
+    tmp.style.left = '-9999px';
+    document.body.appendChild(tmp);
+    const qr = new QRCode(tmp, {
+      text: id, width: 200, height: 200,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    setTimeout(() => {
+      const img = tmp.querySelector('img');
+      const canvas = tmp.querySelector('canvas');
+      const dataUrl = img ? img.src : (canvas ? canvas.toDataURL('image/png') : null);
+      document.body.removeChild(tmp);
+      resolve(dataUrl);
+    }, 300);
+  });
+}
+
+async function downloadAllPDF() {
+  if(currentQRs.length===0) { toast('No QR codes to export','error'); return; }
+  toast('Generating PDF...');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const perRow = 3, cellW = 60, cellH = 70;
+  const startX = 15, startY = 15;
+  let col=0, row=0;
+
+  for(let i=0;i<currentQRs.length;i++) {
+    const {id} = currentQRs[i];
+    const dataUrl = await makeQRDataURL(id);
+    if(!dataUrl) continue;
+
+    const x = startX + col*cellW;
+    const y = startY + row*cellH;
+
+    doc.setFillColor(26,26,38);
+    doc.roundedRect(x-2,y-2,cellW-4,cellH-4,3,3,'F');
+    doc.addImage(dataUrl,'PNG',x+3,y+3,44,44);
+    doc.setTextColor(6,182,212);
+    doc.setFontSize(6.5);
+    doc.setFont('courier','bold');
+    doc.text(id, x+(cellW/2)-3, y+52, {align:'center', maxWidth: cellW-10});
+
+    col++;
+    if(col>=perRow) { col=0; row++; }
+    if(row>=4 && i<currentQRs.length-1) { doc.addPage(); col=0; row=0; }
+  }
+
+  doc.save('QR_Batch.pdf');
+  toast('Batch PDF downloaded!');
+}
+
+async function downloadSavedPDF() {
+  if(savedQRs.length===0) { toast('No saved QR codes','error'); return; }
+  toast('Generating PDF...');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const perRow = 3, cellW = 60, cellH = 70;
+  const startX = 15, startY = 15;
+  let col=0, row=0;
+
+  for(let i=0;i<savedQRs.length;i++) {
+    const {id, ts} = savedQRs[i];
+    const dataUrl = await makeQRDataURL(id);
+    if(!dataUrl) continue;
+
+    const x = startX + col*cellW;
+    const y = startY + row*cellH;
+
+    doc.setFillColor(26,26,38);
+    doc.roundedRect(x-2,y-2,cellW-4,cellH-4,3,3,'F');
+    doc.addImage(dataUrl,'PNG',x+3,y+3,44,44);
+    doc.setTextColor(6,182,212);
+    doc.setFontSize(6.5);
+    doc.setFont('courier','bold');
+    doc.text(id, x+(cellW/2)-3, y+52, {align:'center', maxWidth: cellW-10});
+    doc.setTextColor(107,107,138);
+    doc.setFontSize(5.5);
+    doc.text(ts, x+(cellW/2)-3, y+57, {align:'center', maxWidth: cellW-10});
+
+    col++;
+    if(col>=perRow) { col=0; row++; }
+    if(row>=4 && i<savedQRs.length-1) { doc.addPage(); col=0; row=0; }
+  }
+
+  doc.save('QR_Saved.pdf');
+  toast('Saved QR PDF downloaded!');
+}
+
+async function downloadSavedSinglePDF(id) {
+  const dataUrl = await makeQRDataURL(id);
+  if(!dataUrl) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a6'});
+  doc.setFillColor(10,10,15);
+  doc.rect(0,0,105,148,'F');
+  doc.addImage(dataUrl,'PNG',22.5,30,60,60);
+  doc.setTextColor(108,99,255);
+  doc.setFontSize(10);
+  doc.setFont('courier','bold');
+  doc.text('QR STUDIO',52.5,20,{align:'center'});
+  doc.setTextColor(6,182,212);
+  doc.setFontSize(8);
+  doc.text(id,52.5,100,{align:'center'});
+  doc.setTextColor(107,107,138);
+  doc.setFontSize(7);
+  doc.text('Scan to auto-fill form',52.5,108,{align:'center'});
+  doc.save(`QR_${id}.pdf`);
+  toast('PDF downloaded!');
+}
+
+// ── SCANNER ─────────────────────────────────────────────────
+let htmlScanner = null;
+let scannerRunning = false;
+
+function startScanner() {
+  if(scannerRunning) return;
+  document.getElementById('reader-container').style.display = 'block';
+  document.getElementById('stop-scan-btn').style.display = 'inline-flex';
+  document.getElementById('start-scan-btn').style.display = 'none';
+  document.getElementById('scan-status').textContent = 'Scanning... Point at a QR code.';
+
+  htmlScanner = new Html5Qrcode("reader");
+  const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1 };
+
+  htmlScanner.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      onScanSuccess(decodedText);
+    },
+    (err) => {}
+  ).catch(err => {
+    toast('Camera error: ' + err, 'error');
+    document.getElementById('scan-status').textContent = 'Camera access denied.';
+    stopScanner();
+  });
+
+  scannerRunning = true;
+}
+
+function stopScanner() {
+  if(htmlScanner && scannerRunning) {
+    htmlScanner.stop().then(()=>{
+      htmlScanner.clear();
+      htmlScanner = null;
+    }).catch(()=>{});
+  }
+  scannerRunning = false;
+  document.getElementById('reader-container').style.display = 'none';
+  document.getElementById('stop-scan-btn').style.display = 'none';
+  document.getElementById('start-scan-btn').style.display = 'flex';
+  document.getElementById('scan-status').textContent = 'Click to activate camera scanner';
+}
+
+function onScanSuccess(scannedId) {
+  stopScanner();
+
+  // Auto-fill form
+  document.getElementById('form-qid').value = scannedId;
+  document.getElementById('form-timestamp').value = new Date().toLocaleString();
+  document.getElementById('form-result').style.display = 'block';
+  document.getElementById('form-result').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // Flash animation
+  const qid = document.getElementById('form-qid');
+  qid.style.transition = 'background 0.5s';
+  qid.style.background = 'rgba(16,185,129,0.25)';
+  setTimeout(()=>{ qid.style.background = ''; }, 1000);
+
+  document.getElementById('scan-status').textContent = `✓ Scanned: ${scannedId}`;
+  toast('QR Scanned: ' + scannedId);
+}
+
+// ── FORM ─────────────────────────────────────────────────────
+let submissions = JSON.parse(localStorage.getItem('submissions')||'[]');
+
+function submitForm() {
+  const qid = document.getElementById('form-qid').value;
+  if(!qid) { toast('No QR ID found','error'); return; }
+
+  const entry = {
+    qid,
+    name: document.getElementById('form-name').value,
+    email: document.getElementById('form-email').value,
+    phone: document.getElementById('form-phone').value,
+    notes: document.getElementById('form-notes').value,
+    ts: document.getElementById('form-timestamp').value,
+  };
+
+  submissions.push(entry);
+  localStorage.setItem('submissions', JSON.stringify(submissions));
+  renderSubmissions();
+  resetForm();
+  toast('Form submitted successfully!');
+}
+
+function resetForm() {
+  ['form-qid','form-name','form-email','form-phone','form-notes','form-timestamp'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('form-result').style.display = 'none';
+}
+
+function renderSubmissions() {
+  const sec = document.getElementById('submissions-section');
+  const list = document.getElementById('submissions-list');
+  const count = document.getElementById('submissions-count');
+
+  if(submissions.length===0) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  count.textContent = submissions.length;
+
+  list.innerHTML = '';
+  submissions.slice().reverse().forEach(s=>{
+    const item = document.createElement('div');
+    item.className = 'saved-item';
+    item.style.flexWrap = 'wrap';
+    item.innerHTML = `
+      <div class="saved-dot" style="background:var(--success)"></div>
+      <div style="flex:1;min-width:180px;">
+        <div class="saved-id">${s.qid}</div>
+        <div class="saved-ts">${s.name||'—'} · ${s.email||'—'} · ${s.ts}</div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function clearSubmissions() {
+  if(!confirm('Clear all submissions?')) return;
+  submissions = [];
+  localStorage.removeItem('submissions');
+  renderSubmissions();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+renderSaved();
+renderSubmissions();
+</script>
+</body>
+</html>
